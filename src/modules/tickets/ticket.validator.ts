@@ -21,12 +21,6 @@ export const listQuerySchema = z.object({
   category: categoryEnum.optional(),
   priority: priorityEnum.optional(),
   status: statusEnum.optional(),
-  limit: z
-    .preprocess(toNumber, z.number().int().min(1).max(100))
-    .default(50)
-    .optional(),
-  offset: z
-    .preprocess(toNumber, z.number().int().min(0))
-    .default(0)
-    .optional(),
+  limit: z.preprocess(toNumber, z.number().int().min(1).max(100)).default(50),
+  offset: z.preprocess(toNumber, z.number().int().min(0)).default(0),
 });

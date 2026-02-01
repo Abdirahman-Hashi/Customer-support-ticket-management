@@ -60,10 +60,26 @@ export async function listTickets(filters: any) {
 
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  const { rows } = await pool.query(
-    `SELECT * FROM tickets ${where} ORDER BY created_at DESC` ,
-    values
-  );
+  // Pagination: apply defaults if not provided
+  const limit = typeof filters.limit === "number" ? filters.limit : 50;
+  const offset = typeof filters.offset === "number" ? filters.offset : 0;
+
+  // Append pagination params
+  values.push(limit);
+  const limitIndex = values.length;
+  values.push(offset);
+  const offsetIndex = values.length;
+
+  const query = `
+    SELECT *
+    FROM tickets
+    ${where}
+    ORDER BY created_at DESC
+    LIMIT $${limitIndex}
+    OFFSET $${offsetIndex}
+  `;
+
+  const { rows } = await pool.query(query, values);
 
   return rows;
 }
