@@ -21,7 +21,8 @@ export async function classifyTicket(
     const client = new OpenAI({ apiKey });
     const response = await client.chat.completions.create(
       {
-        model: "gpt-3.5-turbo",
+        // Use a current, widely available model
+        model: "gpt-4o-mini",
         temperature: 0,
         response_format: { type: "json_object" },
         messages: [
@@ -32,7 +33,7 @@ export async function classifyTicket(
           },
         ],
       },
-      { timeout: 3000 }
+      { timeout: 8000 }
     );
 
     const content = response.choices?.[0]?.message?.content;
@@ -41,7 +42,11 @@ export async function classifyTicket(
     const parsed = aiSchema.parse(JSON.parse(content));
     return parsed;
   } catch (error) {
-    console.error("AI classification failed:", error);
+    // Improve diagnostics without leaking secrets
+    const anyErr = error as any;
+    const status = anyErr?.status ?? anyErr?.response?.status;
+    const data = anyErr?.response?.data ?? anyErr?.error ?? anyErr?.message;
+    console.error("AI classification failed:", { status, data });
     return { category: "general", priority: "medium", confidence: 0, fallback: true };
   }
 }
