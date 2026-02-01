@@ -1,0 +1,199 @@
+openapi: 3.0.3
+info:
+  title: Customer Support Ticket Management API
+  version: 1.0.0
+  description: |
+    Backend service to manage support tickets with AI classification.
+    Returns structured, validated data and falls back gracefully when AI is unavailable.
+servers:
+  - url: http://localhost:3000
+    description: Local dev
+
+tags:
+  - name: Tickets
+    description: Ticket CRUD and retrieval
+
+paths:
+  /tickets:
+    post:
+      tags: [Tickets]
+      summary: Create a new support ticket and trigger AI classification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketCreateRequest'
+            examples:
+              example:
+                value:
+                  title: "Payment failed"
+                  description: "Card charged but order did not complete"
+      responses:
+        '201':
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [Tickets]
+      summary: List tickets with optional filtering
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+            enum: [billing, technical, general]
+        - in: query
+          name: priority
+          schema:
+            type: string
+            enum: [low, medium, high]
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [open, closed]
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of tickets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Ticket'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tickets/{id}:
+    get:
+      tags: [Tickets]
+      summary: Get a ticket by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ticket
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    TicketCreateRequest:
+      type: object
+      required: [title, description]
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 200
+        description:
+          type: string
+          minLength: 5
+          maxLength: 2000
+    Ticket:
+      type: object
+      required: [id, title, description, created_at, status, ai_status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          nullable: true
+          enum: [billing, technical, general]
+        priority:
+          type: string
+          nullable: true
+          enum: [low, medium, high]
+        ai_confidence:
+          type: number
+          format: float
+          nullable: true
+          minimum: 0
+          maximum: 1
+        status:
+          type: string
+          enum: [open, closed]
+          default: open
+        ai_status:
+          type: string
+          description: Status of AI classification (e.g., pending, done, fallback)
+          enum: [pending, done, fallback]
+        created_at:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+    ValidationError:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            details:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+    NotFoundError:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
