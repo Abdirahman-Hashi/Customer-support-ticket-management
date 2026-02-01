@@ -1,6 +1,7 @@
 import { v4 as uuid } from "uuid";
 import * as repo from "./ticket.repository.js";
 import { classifyTicket } from "../../services/ai.service.js";
+import { enqueueClassification } from "../../queue/index.js";
 
 export async function createTicket(data: any) {
   const id = uuid();
@@ -15,6 +16,13 @@ export async function createTicket(data: any) {
     ai_status: "pending",
   });
 
+  // Optional async classification via queue
+  if (String(process.env.USE_QUEUE).toLowerCase() === "true") {
+    await enqueueClassification({ id, title: data.title, description: data.description });
+    return repo.getTicketById(id);
+  }
+
+  // Default: classify synchronously in request path
   const ai = await classifyTicket(data.title, data.description);
   await repo.updateClassification(id, ai);
 
