@@ -3,10 +3,11 @@ import { z } from "zod";
 export const createTicketSchema = z.object({
   title: z.string().min(5),
   description: z.string().min(10),
+  createdBy: z.coerce.number().int().positive().optional(),
 });
 
 export const idParamSchema = z.object({
-  id: z.string().uuid(),
+  id: z.coerce.number().int().positive(),
 });
 
 const categoryEnum = z.enum(["billing", "technical", "general"]);

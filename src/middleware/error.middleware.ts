@@ -1,8 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 import { HttpError } from "../utils/httpError.js";
+import { logger } from "../utils/logger.js";
 
 export function errorHandler(err: any, req: Request, res: Response, _next: NextFunction) {
-  console.error(err);
+  logger.error("Unhandled error", { err: err?.message ?? String(err), name: err?.name });
 
   if (err instanceof HttpError) {
     return res.status(err.status).json({ error: "HttpError", message: err.message });

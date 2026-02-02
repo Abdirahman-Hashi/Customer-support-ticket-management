@@ -3,26 +3,26 @@ import { pool } from "../../config/db.js";
 export async function insertTicket(ticket: any) {
   const query = `
     INSERT INTO tickets
-    (id, title, description, category, priority, ai_confidence, ai_status)
+    (title, description, category, priority, ai_confidence, ai_status, created_by)
     VALUES ($1,$2,$3,$4,$5,$6,$7)
     RETURNING *
   `;
 
   const values = [
-    ticket.id,
     ticket.title,
     ticket.description,
     ticket.category,
     ticket.priority,
     ticket.ai_confidence,
     ticket.ai_status,
+    ticket.created_by ?? null,
   ];
 
   const { rows } = await pool.query(query, values);
   return rows[0];
 }
 
-export async function updateClassification(id: string, ai: any) {
+export async function updateClassification(id: number, ai: any) {
   await pool.query(
     `UPDATE tickets 
      SET category=$1, priority=$2, ai_confidence=$3, ai_status=$4
@@ -31,7 +31,7 @@ export async function updateClassification(id: string, ai: any) {
   );
 }
 
-export async function getTicketById(id: string) {
+export async function getTicketById(id: number) {
   const { rows } = await pool.query(
     `SELECT * FROM tickets WHERE id=$1` ,
     [id]
@@ -60,9 +60,9 @@ export async function listTickets(filters: any) {
 
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  // Pagination: apply defaults if not provided
-  const limit = typeof filters.limit === "number" ? filters.limit : 50;
-  const offset = typeof filters.offset === "number" ? filters.offset : 0;
+  // Pagination: coerce to numbers (middleware should parse, but coerce defensively)
+  const limit = Number.isFinite(Number(filters.limit)) ? Number(filters.limit) : 50;
+  const offset = Number.isFinite(Number(filters.offset)) ? Number(filters.offset) : 0;
 
   // Append pagination params
   values.push(limit);

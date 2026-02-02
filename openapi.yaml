@@ -12,12 +12,15 @@ servers:
 tags:
   - name: Tickets
     description: Ticket CRUD and retrieval
+  - name: Users
+    description: User management
 
 paths:
   /tickets:
     post:
       tags: [Tickets]
       summary: Create a new support ticket and trigger AI classification
+      description: "If a user named 'admin' exists, the ticket creator is set to that user, ignoring any 'createdBy' in the request."
       requestBody:
         required: true
         content:
@@ -39,7 +42,7 @@ paths:
               examples:
                 created:
                   value:
-                    id: "2b1b0b2e-7b6d-4f7e-8a0f-8f6a9c7b8d2a"
+                    id: 123
                     title: "Payment failed"
                     description: "Card charged but order did not complete"
                     category: "general"
@@ -141,7 +144,7 @@ paths:
               examples:
                 page:
                   value:
-                    - id: "3e14986c-7ce7-4d75-910c-d74554b51e58"
+                    - id: 201
                       title: "installation failed"
                       description: "App shows installed but kept crashing."
                       category: "technical"
@@ -150,7 +153,7 @@ paths:
                       status: "open"
                       ai_status: "done"
                       created_at: "2026-02-01T17:29:54.462Z"
-                    - id: "68728350-b917-40bd-bc4e-ae159ccf27f9"
+                    - id: 202
                       title: "installation failed"
                       description: "App shows installed but kept crashes."
                       category: "general"
@@ -159,6 +162,93 @@ paths:
                       status: "open"
                       ai_status: "fallback"
                       created_at: "2026-02-01T17:26:33.638Z"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users:
+    post:
+      tags: [Users]
+      summary: Create a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    get:
+      tags: [Users]
+      summary: List users
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get a user by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
         '500':
           description: Internal server error
           content:
@@ -175,8 +265,8 @@ paths:
           name: id
           required: true
           schema:
-            type: string
-            format: uuid
+            type: integer
+            format: int64
       responses:
         '200':
           description: Ticket
@@ -210,19 +300,23 @@ components:
       properties:
         title:
           type: string
-          minLength: 3
+          minLength: 5
           maxLength: 200
         description:
           type: string
-          minLength: 5
+          minLength: 10
           maxLength: 2000
+        createdBy:
+          type: integer
+          format: int64
+          description: Optional creator user id; ignored when a user named 'admin' exists. In that case, the ticket creator defaults to that user's id.
     Ticket:
       type: object
       required: [id, title, description, created_at, status, ai_status]
       properties:
         id:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
         title:
           type: string
         description:
@@ -249,6 +343,36 @@ components:
           type: string
           description: Status of AI classification (e.g., pending, done, fallback)
           enum: [pending, done, fallback]
+        created_by:
+          type: integer
+          format: int64
+          nullable: true
+          description: Foreign key to users.id; null if not set or user deleted
+        created_at:
+          type: string
+          format: date-time
+    UserCreateRequest:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+    User:
+      type: object
+      required: [id, name, email, created_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+          format: email
         created_at:
           type: string
           format: date-time

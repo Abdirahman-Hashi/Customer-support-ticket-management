@@ -47,12 +47,12 @@ describe("Tickets API", () => {
   });
 
   it("returns 404 for non-existent id", async () => {
-    const res = await request(app).get("/tickets/aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa");
+    const res = await request(app).get("/tickets/999999999");
     expect(res.status).toBe(404);
   });
 
-  it("returns 400 for invalid uuid param", async () => {
-    const res = await request(app).get("/tickets/not-a-uuid");
+  it("returns 400 for invalid id param", async () => {
+    const res = await request(app).get("/tickets/not-a-id");
     expect(res.status).toBe(400);
   });
 

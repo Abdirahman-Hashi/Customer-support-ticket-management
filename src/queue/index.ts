@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 export type ClassificationJob = {
-  id: string;
+  id: number;
   title: string;
   description: string;
 };

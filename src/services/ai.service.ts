@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { z } from "zod";
+import { logger } from "../utils/logger.js";
 
 const aiSchema = z.object({
   category: z.enum(["billing", "technical", "general"]),
@@ -19,10 +20,12 @@ export async function classifyTicket(
       throw new Error("OPENAI_API_KEY not set");
     }
     const client = new OpenAI({ apiKey });
+    const model = process.env.AI_MODEL || "gpt-4o-mini";
+    const timeout = Number(process.env.AI_TIMEOUT_MS || 8000);
     const response = await client.chat.completions.create(
       {
         // Use a current, widely available model
-        model: "gpt-4o-mini",
+        model,
         temperature: 0,
         response_format: { type: "json_object" },
         messages: [
@@ -33,7 +36,7 @@ export async function classifyTicket(
           },
         ],
       },
-      { timeout: 8000 }
+      { timeout }
     );
 
     const content = response.choices?.[0]?.message?.content;
@@ -46,7 +49,7 @@ export async function classifyTicket(
     const anyErr = error as any;
     const status = anyErr?.status ?? anyErr?.response?.status;
     const data = anyErr?.response?.data ?? anyErr?.error ?? anyErr?.message;
-    console.error("AI classification failed:", { status, data });
+    logger.error("AI classification failed", { status, data });
     return { category: "general", priority: "medium", confidence: 0, fallback: true };
   }
 }
